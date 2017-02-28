@@ -2,13 +2,12 @@
 
 namespace backend\controllers;
 
-
-use dosamigos\tableexport\TableExportAction;
 use Yii;
 use backend\models\User;
 use backend\models\UserSearch;
 use yii\base\Exception;
 use common\Controllers\ApiController;
+use yii\helpers\Json;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 
@@ -30,17 +29,6 @@ class UserController extends ApiController
         ];
     }
 
-    public function actions()
-    {
-        return [
-            // ...
-            'download' => [
-                'class' => TableExportAction::className()
-            ]
-            // ...
-        ];
-    }
-
     /**
      * Lists all User models.
      * @return mixed
@@ -50,8 +38,29 @@ class UserController extends ApiController
         $searchModel = new UserSearch();
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
         $dataProvider->pagination = [
-            'pageSize' => 15,
+            'pageSize' => 20,
         ];
+        /*********************在gridview列表页面上直接修改数据 start*****************************************/
+        //获取前面一部传过来的值
+        if (Yii::$app->request->post('hasEditable')) {
+            $id = Yii::$app->request->post('editableKey'); //获取需要编辑的数据id
+            $model = $this->findModel($id);
+            $out = Json::encode(['output'=>'', 'message'=>'']);
+            //获取用户修改的参数（比如：角色）
+            $posted = current($_POST['User']); //输出数组中当前元素的值，默认初始指向插入到数组中的第一个元素。移动数组内部指针，使用next()和prev()
+
+            $post = ['User' => $posted];
+            $output = '';
+            if ($model->load($post)) { //赋值
+                $model->role=$posted['role'];
+                $model->save(); //save()方法会先调用validate()再执行insert()或者update()
+                isset($posted['role']) && $output=User::getUserRoleName($model->role); //配送人员当前状态
+            }
+            $out = Json::encode(['output'=>$output, 'message'=>'']);
+            echo $out;
+            return;
+        }
+        /*******************在gridview列表页面上直接修改数据 end***********************************************/
         return $this->render('index', [
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
@@ -86,10 +95,10 @@ class UserController extends ApiController
                 $model->attributes=[
                     'username'=>$User['username'],
                     'auth_key'=>Yii::$app->security->generateRandomString(),
-                    'password_hash'=>Yii::$app->security->generatePasswordHash($User['userpassword']),
+                    'password'=>md5(Yii::$app->params['pwd_pre'].$User['userpassword']),
                     'email'=>$User['email'],
-                    'created_at'=>time(),
-                    'updated_at'=>time()
+                    'created_at'=>date('Y-m-d H:i:s'),
+                    'updated_at'=>date('Y-m-d H:i:s')
                 ];
                 if(!$model->save()){
                     throw new Exception;
@@ -125,6 +134,7 @@ class UserController extends ApiController
         }
     }
 
+
     /**
      * Deletes an existing User model.
      * If deletion is successful, the browser will be redirected to the 'index' page.
@@ -133,11 +143,13 @@ class UserController extends ApiController
      */
     public function actionDelete($id)
     {
-        $this->findModel($id)->delete();
-
+        $model=$this->findModel($id);
+        $model->status=0;
+        $model->save();
         return $this->redirect(['index']);
     }
 
+    //批量删除接口
     public function actionAjaxDeleteAll(){
         $users=Yii::$app->request->post('uids');
 
@@ -170,4 +182,6 @@ class UserController extends ApiController
             throw new NotFoundHttpException('The requested page does not exist.');
         }
     }
+
+
 }

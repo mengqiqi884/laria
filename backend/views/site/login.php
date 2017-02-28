@@ -10,7 +10,7 @@ $this->title = '登陆';
 
 $fieldOptions1 = [
     'options' => ['class' => 'form-group has-feedback'],
-    'inputTemplate' => "{input}<span class='glyphicon glyphicon-envelope form-control-feedback'></span>"
+    'inputTemplate' => "{input}<span class='glyphicon glyphicon-phone form-control-feedback'></span>"
 ];
 
 $fieldOptions2 = [
@@ -25,7 +25,7 @@ $fieldOptions2 = [
     </div>
     <!-- /.login-logo -->
     <div class="login-box-body">
-        <p class="login-box-msg">Sign in to start your session</p>
+<!--        <p class="login-box-msg">Sign in to start your session</p>-->
 
         <?php $form = ActiveForm::begin(['id' => 'login-form', 'enableClientValidation' => false]); ?>
 
@@ -53,17 +53,18 @@ $fieldOptions2 = [
 
         <?php ActiveForm::end(); ?>
 
-        <div class="social-auth-links text-center">
-            <p>- OR -</p>
-            <a href="#" class="btn btn-block btn-social btn-facebook btn-flat"><i class="fa fa-facebook"></i> Sign in
-                using Facebook</a>
-            <a href="#" class="btn btn-block btn-social btn-google-plus btn-flat"><i class="fa fa-google-plus"></i> Sign
-                in using Google+</a>
-        </div>
+<!--        <div class="social-auth-links text-center">-->
+<!--            <p>- OR -</p>-->
+<!--            <a href="#" class="btn btn-block btn-social btn-facebook btn-flat"><i class="fa fa-facebook"></i> Sign in-->
+<!--                using Facebook</a>-->
+<!--            <a href="#" class="btn btn-block btn-social btn-google-plus btn-flat"><i class="fa fa-google-plus"></i> Sign-->
+<!--                in using Google+</a>-->
+<!--        </div>-->
         <!-- /.social-auth-links -->
-
-        <a href="#">忘记密码？</a><br>
-        <a href="register.html" class="text-center">注册</a>
+        <div>
+            <a href="#">忘记密码？</a>&nbsp;&nbsp;
+            <a href="register.html" class="text-center" style="float: right">注册</a>
+        </div>
 
     </div>
     <!-- /.login-box-body -->

@@ -1,50 +1,30 @@
 <?php
 
 use yii\helpers\Html;
-use yii\grid\GridView;
+
 use \yii\bootstrap\Modal;
 use yii\helpers\Url;
+use \backend\models\Dist;
+use kartik\editable\Editable;
 
-/* @var $this yii\web\View */
-/* @var $searchModel backend\models\UserSearch */
-/* @var $dataProvider yii\data\ActiveDataProvider */
-//\backend\assets\AppAsset::register($this);
-//$this->registerJsFile('@web/js/export-table/export-user-table.js');
-\dosamigos\tableexport\ButtonTableExportAsset::register($this);
-
+\backend\assets\AppAsset::register($this);
 
 $this->title = '用户管理';
 $this->params['breadcrumbs'][] = $this->title;
 ?>
 <div class="user-index">
 
-    <h1><?//= Html::encode($this->title) ?></h1>
-
     <p>
-        <!-- 按钮触发模态框  data-toggle 用于打开模态窗口；data-target：表示模态框的id-->
-        <?= Html::a('新增用户', "javascript:void(0);", ['id' => 'create', 'data-toggle' => 'modal','data-target' => '#create-modal','class' => 'btn btn-success']) ?>
+        <?//= Html::a('新增用户', "javascript:void(0);", ['id' => 'create', 'data-toggle' => 'modal','data-target' => '#create-modal','class' => 'btn btn-success']) ?>
         <?= Html::a('批量删除', "javascript:void(0);", ['class' => 'btn btn-danger gridview']) ?>
-        <a id="linkId" >Export Table as Xml</a>
     </p>
 
-    <?=\dosamigos\tableexport\ButtonTableExport::widget([
-
-        'label' => 'Export Table',
-        'selector' => '#grid > table', // any jQuery selector
-        'split' => true,
-        'exportClientOptions' => [
-            'ignoredColumns' => [0, 7],
-            'useDataUri' => false,
-            'url' => \yii\helpers\Url::to('controller/download')
-        ]])
-    ?>
-
-    <?=GridView::widget([
+    <?=\kartik\grid\GridView::widget([
         'dataProvider' => $dataProvider,
-        'options' => ['class' => 'grid-view','style'=>'overflow:auto', 'id' => 'grid'],
+        'options'=>['id'=>'grid'],
         'columns' => [
             [
-                'class'=>\yii\grid\CheckboxColumn::className(),
+                'class'=>\kartik\grid\CheckboxColumn::className(),
                 'checkboxOptions' => function ($model, $key, $index, $column) {
                     return ['value'=>$model->id,'class'=>'checkbox'];
                 }
@@ -54,47 +34,97 @@ $this->params['breadcrumbs'][] = $this->title;
             'auth_key',
             'email',
             [
-                'attribute'=>'created_at',
+                'attribute'=>'role',
                 'value'=>function($model){
-                    return date('Y-m-d H:i:s',$model->created_at);
-                }
+                    return Dist::getTypeName($model->role,'后台用户');
+                },
+                'class'=>'kartik\grid\EditableColumn',
+                'editableOptions'=>[
+                    'format' => Editable::FORMAT_BUTTON,
+                    'inputType' => Editable::INPUT_DROPDOWN_LIST,
+                    'asPopover' => true,
+                    'data' =>Dist::getAllName('后台用户'),
+                ],
             ],
-
+            'created_at',
             [
                 'class' => 'yii\grid\ActionColumn',
-                'header'=>'操作',
+                'header' => '操作',
+                'template' => '{view} &nbsp;&nbsp;{delete}',
+                'buttons' => [
+                    'view' => function ($url, $model) {
+                        return Html::a('<i class="fa fa-eye"> 查看</i>', $url, [
+                            'title' => Yii::t('app', '查看'),
+                            'class' => 'del btn btn-primary btn-xs',
+                        ]);
+                    },
+
+                    'delete' => function ($url, $model) {
+                        if($model->status == 0){
+                            return Html::a('<i class="fa fa-unlock-alt"> 激活</i>', $url, [
+                                'title' => Yii::t('app', '激活'),
+                                'class' => 'del btn btn-info btn-xs',
+                                'data' => [
+                                    'confirm' => '你确定要激活该用户吗?',
+                                    'method' => 'post',
+                                ],
+                            ]);
+                        }else{
+                            return Html::a('<i class="fa fa-lock"> 禁用</i>', $url, [
+                                'title' => Yii::t('app', '禁用'),
+                                'class' => 'del btn btn-danger btn-xs',
+                                'data' => [
+                                    'confirm' => '你确定要禁用该用户吗?',
+                                    'method' => 'post',
+                                ],
+                            ]);
+                        }
+                    }
+
+                ],
+
             ],
+
         ],
+        'responsive'=>true,
+        'hover'=>true,
+        'condensed'=>true,
+        'floatHeader'=>true,
+        'pjax'=>true,
+        //set your toolbar
+        'toolbar' => [
+                //按钮触发模态框  data-toggle 用于打开模态窗口；data-target：表示模态框的id
+            ['content' =>
+                Html::button('<i class="glyphicon glyphicon-plus"></i>', ['type'=>'button', 'title'=>'添加', 'class'=>'btn btn-success', 'onclick'=>'#', 'data-toggle' => 'modal','data-target' => '#create-modal']) . '   '.
+                Html::a('<i class="glyphicon glyphicon-repeat"></i>', ['index'], ['data-pjax'=>0, 'class'=>'btn btn-default', 'title'=>'刷新'])
+            ],
+            '{export}',
+            '{toggleData}',
+        ],
+        'panel' => [
+            'showFooter'=>true,
+        ],
+        'export' => ['fontAwesome'=>true],
     ]); ?>
 
 
     <?php
-    $this->registerJs('
-        $("#linkId").tableExport({
-            type: "xml",
-            useDataUri: true
-        });
-    ');
-
-
     //批量删除
     $this->registerJs('
-        $(".gridview").on("click", function () {
+        $(".content .gridview").on("click", function () {
             //注意这里的$("#grid")，要与gridview的options id保持一致
             var keys = $("#grid").yiiGridView("getSelectedRows");
-            //console.log(keys);
-            if(keys.length==0){
-                layer.msg("请选择需要删除的用户");
-            }else{
-                $.post("ajax-delete-all",{uids:keys},function(data){
-                    if(data.status=="200"){
-                        window.location.reload();
-                    }else{
-                        layer.alert(data.message);
-                    }
-                },"json");
-            }
 
+            if(keys.length==0){
+               layer.msg("请选择需要删除的用户");
+            }else{
+               $.post("ajax-delete-all",{uids:keys},function(data){
+                  layer.alert(data.message);
+                  if(data.status=="200"){
+                      window.location.reload();
+                  }
+               },"json");
+            }
         });
     ');
     //新增用户
@@ -113,4 +143,5 @@ $this->params['breadcrumbs'][] = $this->title;
     ');
     Modal::end();
     ?>
+
 </div>

@@ -16,6 +16,11 @@ return [
         "admin" => [
             "class" => 'mdm\admin\Module',
         ],
+        'gridview'=>[
+            'class' => '\kartik\grid\Module',
+            'downloadAction' => 'export/download',
+
+        ],
     ],
     "aliases" => [
         "@mdm/admin" => "@vendor/mdmsoft/yii2-admin",
