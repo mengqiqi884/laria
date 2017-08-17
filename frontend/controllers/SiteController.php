@@ -1,17 +1,17 @@
 <?php
 namespace frontend\controllers;
 
+use frontend\helpers\StringHelper;
+use frontend\models\FUser;
 use Yii;
+use yii\base\Exception;
 use yii\base\InvalidParamException;
 use yii\web\BadRequestHttpException;
 use yii\web\Controller;
 use yii\filters\VerbFilter;
 use yii\filters\AccessControl;
-use common\models\LoginForm;
-use frontend\models\PasswordResetRequestForm;
-use frontend\models\ResetPasswordForm;
-use frontend\models\SignupForm;
-use frontend\models\ContactForm;
+use frontend\models\LoginForm;
+
 
 /**
  * Site controller
@@ -26,24 +26,23 @@ class SiteController extends Controller
         return [
             'access' => [
                 'class' => AccessControl::className(),
-                'only' => ['logout', 'signup'],
                 'rules' => [
                     [
-                        'actions' => ['signup'],
+                        'actions' => ['index','smser','ajax-register','ajax-login','to-route'],
                         'allow' => true,
-                        'roles' => ['?'],
+                        'roles' => ['?'],  //游客身份
                     ],
                     [
                         'actions' => ['logout'],
                         'allow' => true,
-                        'roles' => ['@'],
+                        'roles' => ['@'], //已登录用户
                     ],
                 ],
             ],
             'verbs' => [
                 'class' => VerbFilter::className(),
                 'actions' => [
-                    'logout' => ['post'],
+                    'logout' => ['post','get'],
                 ],
             ],
         ];
@@ -66,40 +65,167 @@ class SiteController extends Controller
     }
 
     /**
-     * Displays homepage.
-     *
-     * @return mixed
+     * 首页
      */
     public function actionIndex()
     {
         return $this->render('index');
     }
 
-    /**
-     * Logs in a user.
-     *
-     * @return mixed
-     */
-    public function actionLogin()
-    {
-        if (!Yii::$app->user->isGuest) {
-            return $this->goHome();
-        }
 
-        $model = new LoginForm();
-        if ($model->load(Yii::$app->request->post()) && $model->login()) {
-            return $this->goBack();
-        } else {
-            return $this->render('login', [
-                'model' => $model,
-            ]);
+    /*
+     *页面跳转
+     */
+    public function actionToRoute()
+    {
+        $path = Yii::$app->request->get('path','');
+        if(empty($path)){
+            return $this->render('index');
+        }else{
+            return $this->render($path);
         }
     }
 
+
+    /*
+     * 获取验证码
+     */
+    public function actionSmser()
+    {
+        $phone = Yii::$app->request->post('account','');
+        $type = Yii::$app->request->post('type', 1);//1为注册发送 2为改密发送
+        $code = strval(rand(000000,999999));
+
+        $user = FUser::findByUsername($phone);
+
+        switch($type){
+            case 1: //注册
+                if(!empty($user)){
+                    return json_encode(['status'=>'500','message'=>'该手机号已被注册']);
+                }
+                break;
+            case 2: //找回密码
+                if(empty($user)){
+                    return json_encode(['status'=>'500','message'=>'该手机号未注册']);
+                }
+                break;
+        }
+        Yii::$app->cache->set($phone, $code, 1800);
+        return json_encode(['status'=>'200','message'=>$code]);
+    }
+
+
+    /*
+     * 注册
+     */
+    public function actionAjaxRegister()
+    {
+        $phone = Yii::$app->request->post('account','');
+        $pwd = Yii::$app->request->post('password','');
+        $code = Yii::$app->request->post('code',0);
+
+        if(empty($phone) || empty($pwd) || empty($code)){
+            return json_encode(['status'=>'300','message'=>'参数错误']);
+        }
+        $user_code = Yii::$app->cache->get($phone);
+        if($user_code==false){
+            return json_encode(['status'=>'400','message'=>'验证码已过期，请重新获取']);
+        }
+
+        if($user_code!=$code){
+            return json_encode(['status'=>'400','message'=>'验证码错误']);
+        }
+        $userModel = FUser::find()->where(['account'=>$phone])->one();
+        if(!empty($userModel)){
+            return json_encode(['status'=>'400','message'=>'该用户已注册']);
+        }
+
+        $userModel = new FUser();
+        $userModel->attributes=[
+            'id' =>StringHelper::createGuid(),
+            'account'=>$phone,
+            'password' => strtolower(md5($pwd)),
+            'nickname' =>substr_replace($phone,'****',3,4),
+            'continue_login_times'=>1,
+            'last_login_time'=>date('Y-m-d H:i:s'),
+            'created_time'=>date('Y-m-d H:i:s'),
+            'updated_time'=>date('Y-m-d H:i:s')
+        ];
+
+        $transaction = Yii::$app->db->beginTransaction();
+        try{
+            if(!$userModel->save())
+            {
+                throw new Exception;
+            }else{
+                Yii::$app->user->login($userModel, 3600 * 24 * 30); //保存登录信息
+            }
+            $transaction->commit();//提交
+           // $backurl = Yii::$app->getResponse()->redirect(Yii::$app->request->getReferrer()); //返回上一页
+            return json_encode(['status'=>'200','message'=>'注册成功']);
+        }catch(Exception $e){
+            $transaction->rollBack();
+            return json_encode(['status'=>'400','message'=>'注册失败']);
+        }
+
+    }
+
     /**
-     * Logs out the current user.
-     *
-     * @return mixed
+     *登陆
+     */
+    public function actionAjaxLogin()
+    {
+        if (!Yii::$app->user->isGuest) {
+            return json_encode(['status'=>'400','message'=>'请先登录']);
+        }
+
+        if(Yii::$app->request->post()){
+            $LoginForm = Yii::$app->request->post('LoginForm');
+            if(empty($LoginForm['username']) || empty($LoginForm['password'])) {
+                return json_encode(['status'=>'400','message'=>'用户名或密码不能为空']);
+            }
+
+            $userModel = FUser::find()->where(['account'=>$LoginForm['username']])->one();
+            if(empty($userModel)) {
+                return json_encode(['status'=>'400','message'=>'用户不存在,请先注册']);
+            }
+            if($userModel->password!=strtolower(md5($LoginForm['password']))){
+                return json_encode(['status'=>'400','message'=>'密码不存在']);
+            }
+
+            $transaction = Yii::$app->db->beginTransaction();
+            try{
+                $last_time = $userModel->last_login_time;
+                //判断 昨日是否登陆过
+                $continue_times = date('Y-m-d',strtotime($last_time)) == date("Y-m-d",strtotime("-1 day")) ? ($userModel->continue_login_times +1): 1;
+
+                $userModel->attributes =[
+                    'created_time' => date('Y-m-d H:i:s'),
+                    'updated_time' => date('Y-m-d H:i:s'),
+                    'last_login_time' => date('Y-m-d H:i:s'),
+                    'continue_login_times' => $continue_times,
+                ];
+
+                if(!$userModel->save()){
+                    throw new Exception;
+                }
+                Yii::$app->user->login($userModel, 3600 * 24 * 30); //保存登录信息
+
+                $transaction->commit();//提交
+                return json_encode(['status'=>'200','message'=>'登陆成功']);
+
+            }catch(Exception $e){
+                $transaction->rollBack();
+                return json_encode(['status'=>'400','message'=>'登陆失败']);
+            }
+        }else{
+            return json_encode(['status'=>'400','message'=>'用户名或密码不能为空']);
+        }
+
+    }
+
+    /**
+     * 退出
      */
     public function actionLogout()
     {
@@ -108,106 +234,5 @@ class SiteController extends Controller
         return $this->goHome();
     }
 
-    /**
-     * Displays contact page.
-     *
-     * @return mixed
-     */
-    public function actionContact()
-    {
-        $model = new ContactForm();
-        if ($model->load(Yii::$app->request->post()) && $model->validate()) {
-            if ($model->sendEmail(Yii::$app->params['adminEmail'])) {
-                Yii::$app->session->setFlash('success', 'Thank you for contacting us. We will respond to you as soon as possible.');
-            } else {
-                Yii::$app->session->setFlash('error', 'There was an error sending your message.');
-            }
 
-            return $this->refresh();
-        } else {
-            return $this->render('contact', [
-                'model' => $model,
-            ]);
-        }
-    }
-
-    /**
-     * Displays about page.
-     *
-     * @return mixed
-     */
-    public function actionAbout()
-    {
-        return $this->render('about');
-    }
-
-    /**
-     * Signs user up.
-     *
-     * @return mixed
-     */
-    public function actionSignup()
-    {
-        $model = new SignupForm();
-        if ($model->load(Yii::$app->request->post())) {
-            if ($user = $model->signup()) {
-                if (Yii::$app->getUser()->login($user)) {
-                    return $this->goHome();
-                }
-            }
-        }
-
-        return $this->render('signup', [
-            'model' => $model,
-        ]);
-    }
-
-    /**
-     * Requests password reset.
-     *
-     * @return mixed
-     */
-    public function actionRequestPasswordReset()
-    {
-        $model = new PasswordResetRequestForm();
-        if ($model->load(Yii::$app->request->post()) && $model->validate()) {
-            if ($model->sendEmail()) {
-                Yii::$app->session->setFlash('success', 'Check your email for further instructions.');
-
-                return $this->goHome();
-            } else {
-                Yii::$app->session->setFlash('error', 'Sorry, we are unable to reset password for the provided email address.');
-            }
-        }
-
-        return $this->render('requestPasswordResetToken', [
-            'model' => $model,
-        ]);
-    }
-
-    /**
-     * Resets password.
-     *
-     * @param string $token
-     * @return mixed
-     * @throws BadRequestHttpException
-     */
-    public function actionResetPassword($token)
-    {
-        try {
-            $model = new ResetPasswordForm($token);
-        } catch (InvalidParamException $e) {
-            throw new BadRequestHttpException($e->getMessage());
-        }
-
-        if ($model->load(Yii::$app->request->post()) && $model->validate() && $model->resetPassword()) {
-            Yii::$app->session->setFlash('success', 'New password saved.');
-
-            return $this->goHome();
-        }
-
-        return $this->render('resetPassword', [
-            'model' => $model,
-        ]);
-    }
 }

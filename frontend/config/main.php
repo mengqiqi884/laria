@@ -11,13 +11,15 @@ return [
     'basePath' => dirname(__DIR__),
     'bootstrap' => ['log'],
     'controllerNamespace' => 'frontend\controllers',
+    'defaultRoute'=>'site/index',
     'components' => [
         'request' => [
             'csrfParam' => '_csrf-frontend',
         ],
         'user' => [
-            'identityClass' => 'common\models\User',
+            'identityClass' => 'frontend\models\FUser',
             'enableAutoLogin' => true,
+            'loginUrl'=>['site/index'],
             'identityCookie' => ['name' => '_identity-frontend', 'httpOnly' => true],
         ],
         'session' => [
@@ -33,17 +35,27 @@ return [
                 ],
             ],
         ],
+        'cache' => [
+            'class' => 'yii\caching\FileCache',
+        ],
+
         'errorHandler' => [
             'errorAction' => 'site/error',
         ],
-        /*
-        'urlManager' => [
-            'enablePrettyUrl' => true,
-            'showScriptName' => false,
-            'rules' => [
-            ],
+        'urlManager'=>[
+            'enablePrettyUrl'=>true
         ],
-        */
+        'view'=>[
+            'renderers'=>[
+                'tpl'=>[
+                    'class' => 'yii\smarty\ViewRenderer',
+                    'options'=>[
+                        'left_delimiter'=>'<{',
+                        'right_delimiter'=>'}>'
+                    ]
+                ]
+            ]
+        ],
     ],
     'params' => $params,
 ];

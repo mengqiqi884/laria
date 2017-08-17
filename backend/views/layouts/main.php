@@ -4,10 +4,9 @@ use yii\helpers\Html;
 /* @var $this \yii\web\View */
 /* @var $content string */
 
-
-if (Yii::$app->controller->action->id === 'login') { 
+if (Yii::$app->controller->action->id === 'login') {
 /**
- * Do not use this code in your template. Remove it. 
+ * Do not use this code in your template. Remove it.
  * Instead, use the code  $this->layout = '//main-login'; in your controller.
  */
     echo $this->render(
@@ -21,9 +20,7 @@ if (Yii::$app->controller->action->id === 'login') {
     } else {
         backend\assets\AppAsset::register($this);
     }
-
-    dmstr\web\AdminLteAsset::register($this);
-
+    backend\assets\IndexAsset::register($this);
     $directoryAsset = Yii::$app->assetManager->getPublishedUrl('@vendor/almasaeed2010/adminlte/dist');
     $user=Yii::$app->user->identity;
     ?>
@@ -37,10 +34,10 @@ if (Yii::$app->controller->action->id === 'login') {
         <title><?= Html::encode($this->title) ?></title>
         <?php $this->head() ?>
     </head>
-    <body class="hold-transition skin-blue sidebar-mini">
-    <?php $this->beginBody() ?>
-    <div class="wrapper">
+    <body>
 
+    <?php $this->beginBody() ?>
+<!--    <div class="wrapper">-->
         <?= $this->render(
             'header.php',
             ['directoryAsset' => $directoryAsset,'user'=>$user]
@@ -51,13 +48,15 @@ if (Yii::$app->controller->action->id === 'login') {
             ['directoryAsset' => $directoryAsset,'user'=>$user]
         )
         ?>
-
         <?= $this->render(
             'content.php',
             ['content' => $content, 'directoryAsset' => $directoryAsset]
         ) ?>
 
-    </div>
+        <?= $this->render(
+            'foot.php'
+        ) ?>
+<!--    </div>-->
 
     <?php $this->endBody() ?>
     </body>

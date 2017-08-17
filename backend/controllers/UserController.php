@@ -2,11 +2,13 @@
 
 namespace backend\controllers;
 
+use backend\models\CUser;
 use Yii;
 use backend\models\User;
 use backend\models\UserSearch;
 use yii\base\Exception;
 use common\Controllers\ApiController;
+use yii\data\ActiveDataProvider;
 use yii\helpers\Json;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
@@ -22,7 +24,7 @@ class UserController extends ApiController
             'verbs' => [
                 'class' => VerbFilter::className(),
                 'actions' => [
-                    'delete' => ['post'],
+                    'delete' => ['post','get'],
 
                 ],
             ],
@@ -35,11 +37,15 @@ class UserController extends ApiController
      */
     public function actionIndex()
     {
+
+//        $dataProvider = CUser::find()->where(['is_del'=>0])->all();
+
         $searchModel = new UserSearch();
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
         $dataProvider->pagination = [
-            'pageSize' => 20,
+            'pageSize' => 10,
         ];
+
         /*********************在gridview列表页面上直接修改数据 start*****************************************/
         //获取前面一部传过来的值
         if (Yii::$app->request->post('hasEditable')) {
@@ -47,14 +53,14 @@ class UserController extends ApiController
             $model = $this->findModel($id);
             $out = Json::encode(['output'=>'', 'message'=>'']);
             //获取用户修改的参数（比如：角色）
-            $posted = current($_POST['User']); //输出数组中当前元素的值，默认初始指向插入到数组中的第一个元素。移动数组内部指针，使用next()和prev()
+            $posted = current($_POST['CUser']); //输出数组中当前元素的值，默认初始指向插入到数组中的第一个元素。移动数组内部指针，使用next()和prev()
 
-            $post = ['User' => $posted];
+            $post = ['CUser' => $posted];
             $output = '';
             if ($model->load($post)) { //赋值
-                $model->role=$posted['role'];
+                $model->u_state=$posted['u_state'];
                 $model->save(); //save()方法会先调用validate()再执行insert()或者update()
-                isset($posted['role']) && $output=User::getUserRoleName($model->role); //配送人员当前状态
+                isset($posted['u_state']) && $output=CUser::getUserState($model->u_state); //配送人员当前状态
             }
             $out = Json::encode(['output'=>$output, 'message'=>'']);
             echo $out;
@@ -123,10 +129,11 @@ class UserController extends ApiController
      */
     public function actionUpdate($id)
     {
+        $this->layout=false;
         $model = $this->findModel($id);
 
         if ($model->load(Yii::$app->request->post()) && $model->save()) {
-            return $this->redirect(['view', 'id' => $model->id]);
+            return $this->redirect(['view', 'id' => $model->u_id]);
         } else {
             return $this->render('update', [
                 'model' => $model,
@@ -144,7 +151,7 @@ class UserController extends ApiController
     public function actionDelete($id)
     {
         $model=$this->findModel($id);
-        $model->status=0;
+        $model->u_state=0;
         $model->save();
         return $this->redirect(['index']);
     }
@@ -155,7 +162,7 @@ class UserController extends ApiController
 
         $transaction = Yii::$app->db->beginTransaction();
         try{
-            $f=User::deleteAll(['in','id',$users]);
+            $f=CUser::deleteAll(['in','u_id',$users]);
             if(!$f){
                 throw new Exception;
             }
@@ -176,7 +183,7 @@ class UserController extends ApiController
      */
     protected function findModel($id)
     {
-        if (($model = User::findOne($id)) !== null) {
+        if (($model = CUser::findOne($id)) !== null) {
             return $model;
         } else {
             throw new NotFoundHttpException('The requested page does not exist.');

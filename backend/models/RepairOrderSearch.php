@@ -50,7 +50,7 @@ class RepairOrderSearch extends RepairOrder
         $query->joinWith(['user']); //<=====加入这句
         $query->joinWith(['appliance']); //<=====加入这句
         $query->joinWith(['brand']);  //<=====加入这句
-        $query->joinWith(['mer_merchant']);
+        $query->joinWith(['merchant']);
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,

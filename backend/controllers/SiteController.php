@@ -35,7 +35,7 @@ class SiteController extends Controller
             'verbs' => [
                 'class' => VerbFilter::className(),
                 'actions' => [
-                    'logout' => ['post'],
+                    'logout' => ['post','get'],
                 ],
             ],
         ];
@@ -75,8 +75,17 @@ class SiteController extends Controller
             return $this->goHome();
         }
 
+        $LoginForm = [
+            'LoginForm'=>[
+                'username' => Yii::$app->request->post('username',''),
+                'password' => Yii::$app->request->post('pwd','')
+            ]
+        ];
+
         $model = new LoginForm();
-        if ($model->load(Yii::$app->request->post()) && $model->login()) {
+
+        if ($model->load($LoginForm) && $model->login()) {
+
             if($model->UpdateModel()){
                 return $this->goBack();
             }else{
@@ -89,16 +98,6 @@ class SiteController extends Controller
                 'model' => $model,
             ]);
         }
-
-
-//        $model = new LoginForm();
-//        if ($model->load(Yii::$app->request->post()) && $model->login()) {
-//            return $this->goBack();
-//        } else {
-//            return $this->render('login', [
-//                'model' => $model,
-//            ]);
-//        }
     }
 
     /**

@@ -11,6 +11,7 @@ return [
     'basePath' => dirname(__DIR__),
     'controllerNamespace' => 'backend\controllers',
     'language'=>'zh-CN',
+    //'defaultRoute'=>'site/login',
     'bootstrap' => ['log'],
     'modules' => [
         "admin" => [
@@ -21,19 +22,27 @@ return [
             'downloadAction' => 'export/download',
 
         ],
+        'redactor' =>[  //文本编辑器，需要开启php扩展 extension=php_fileinfo;扩展
+            //图片保存目录在 当前web/uploads/1/下
+            'class' => 'yii\redactor\RedactorModule',
+            'imageAllowExtensions'=>['jpg','png','gif']
+        ] ,
     ],
     "aliases" => [
-        "@mdm/admin" => "@vendor/mdmsoft/yii2-admin",
+        "@mdm/admin" => '@vendor/mdmsoft/yii2-admin',
     ],
     'as access' => [
         //ACF肯定要加,加了才会自动验证是否有权限
         'class' => 'mdm\admin\components\AccessControl',
         'allowActions' => [
-            '*'
+//           'site/login',
+//            'debug/*',
+//            'gii/*',
 //            'debug/*',
 //            'site/*',
 //            'gii/*',
 //            'admin/*'
+        '*'
         ],
     ],
 
@@ -47,7 +56,8 @@ return [
             'csrfParam' => '_csrf-backend',
         ],
         'user' => [
-            'identityClass' => 'backend\models\User',
+            'identityClass' => 'backend\models\Admin',
+            'loginUrl'=>['site/login'],
             'enableAutoLogin' => true,
             'identityCookie' => ['name' => '_identity-backend', 'httpOnly' => true],
         ],

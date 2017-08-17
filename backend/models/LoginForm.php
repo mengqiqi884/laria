@@ -52,7 +52,7 @@ class LoginForm extends Model
 
     public function checkRole($role){
         if(!$this->hasErrors()){
-            if($role != 10){
+            if(!in_array($role,[174,176])){
                 return false;
             }else{
                 return true;
@@ -67,11 +67,11 @@ class LoginForm extends Model
         $user = $this->getUser();
         if(!$user){
             $this->addError('username','用户不存在');
-        }elseif (!$this->checkPassword($user->password)) {
+        }elseif (!$this->checkPassword($user->a_pwd)) {
             $this->addError('password', '密码错误');
-        }elseif (!$this->checkStatus($user->status)) {
+        }elseif (!$this->checkStatus($user->a_state)) {
             $this->addError('username', '该账号状态异常,请联系管理员');
-        }elseif (!$this->checkRole($user->role)) {
+        }elseif (!$this->checkRole($user->a_role)) {
             $this->addError('username', '该用户非后台管理员');
         }
 //        }elseif ($user->wa_lock!=0) {
@@ -81,7 +81,7 @@ class LoginForm extends Model
 
     public function checkPassword($password){
         if(!$this->hasErrors()){
-            return $password == md5(Yii::$app->params['pwd_pre'].$this->password);
+            return $password == md5($this->password);
         }else{
             return false;
         }
@@ -100,7 +100,7 @@ class LoginForm extends Model
     protected function getUser()
     {
         if ($this->_user === null) {
-            $this->_user = User::findIdentityByUsername($this->username);
+            $this->_user = Admin::findIdentityByUsername($this->username);
         }
 
         return $this->_user;
@@ -110,11 +110,9 @@ class LoginForm extends Model
         $transaction = Yii::$app->db->beginTransaction();
         try{
             $user =$this->getUser();
-
-            $user->auth_key=Yii::$app->security->generateRandomString(); //自动登陆key
-            $user->token = Yii::$app->security->generateRandomString();
-//            $user->created_at = date('Y-m-d H:i:s',time());
-//            $user->updated_at = date('Y-m-d H:i:s',time());
+            $user->a_token = Yii::$app->security->generateRandomString();
+            $user->created_time = date('Y-m-d H:i:s',time());
+            $user->updated_time = date('Y-m-d H:i:s',time());
             $r=$user->save();
 
             $transaction->commit();//提交

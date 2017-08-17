@@ -5,7 +5,9 @@ use yii\helpers\Html;
 /* @var $this \yii\web\View */
 /* @var $content string */
 
-dmstr\web\AdminLteAsset::register($this);
+backend\assets\AppAsset::register($this);
+
+// dmstr\web\AdminLteAsset::register($this);
 
 $this->title='Laria';
 ?>

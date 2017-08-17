@@ -24,7 +24,7 @@ class Menu extends \yii\db\ActiveRecord
      */
     public static function tableName()
     {
-        return 'menu';
+        return 'admin_menu';
     }
 
     /**
@@ -33,11 +33,11 @@ class Menu extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['name'], 'required'],
-            [['parent', 'order'], 'integer'],
-            [['data'], 'string'],
-            [['name'], 'string', 'max' => 128],
-            [['route'], 'string', 'max' => 256]
+            [['mam_name'], 'required'],
+            [['mam_parentid', 'mam_order'], 'integer'],
+            [['mam_data'], 'string'],
+            [['mam_name'], 'string', 'max' => 128],
+            [['mam_route'], 'string', 'max' => 256]
         ];
     }
 
@@ -47,12 +47,12 @@ class Menu extends \yii\db\ActiveRecord
     public function attributeLabels()
     {
         return [
-            'id' => 'ID',
-            'name' => 'Name',
-            'parent' => 'Parent',
-            'route' => 'Route',
-            'order' => 'Order',
-            'data' => 'Data',
+            'mam_id' => 'ID',
+            'mam_name' => 'Name',
+            'mam_parentid' => 'Parent',
+            'mam_route' => 'Route',
+            'mam_order' => 'Order',
+            'mam_data' => 'Data',
         ];
     }
 

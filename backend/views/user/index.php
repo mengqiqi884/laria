@@ -7,141 +7,184 @@ use yii\helpers\Url;
 use \backend\models\Dist;
 use kartik\editable\Editable;
 
-\backend\assets\AppAsset::register($this);
-
 $this->title = '用户管理';
 $this->params['breadcrumbs'][] = $this->title;
+
+
+\backend\assets\TableAsset::register($this);
+
 ?>
-<div class="user-index">
+<style>
 
-    <p>
-        <?//= Html::a('新增用户', "javascript:void(0);", ['id' => 'create', 'data-toggle' => 'modal','data-target' => '#create-modal','class' => 'btn btn-success']) ?>
-        <?= Html::a('批量删除', "javascript:void(0);", ['class' => 'btn btn-danger gridview']) ?>
-    </p>
+    /*批量删除*/
+    .del-all {
+        margin: 0 12px 8px 0;border-radius:5px;box-shadow: 1px 2px 2px #ccc;
+    }
+    /*用户头像*/
+    .user-img{
+        border-radius: 3px;
+        display: inline-block;
+        height: 28px;
+        margin-right: 10px;
+        vertical-align: middle;
+        width: 28px;
+    }
+</style>
 
-    <?=\kartik\grid\GridView::widget([
-        'dataProvider' => $dataProvider,
-        'options'=>['id'=>'grid'],
-        'columns' => [
-            [
-                'class'=>\kartik\grid\CheckboxColumn::className(),
-                'checkboxOptions' => function ($model, $key, $index, $column) {
-                    return ['value'=>$model->id,'class'=>'checkbox'];
-                }
-            ],
-            'id',
-            'username',
-            'auth_key',
-            'email',
-            [
-                'attribute'=>'role',
-                'value'=>function($model){
-                    return Dist::getTypeName($model->role,'后台用户');
-                },
-                'class'=>'kartik\grid\EditableColumn',
-                'editableOptions'=>[
-                    'format' => Editable::FORMAT_BUTTON,
-                    'inputType' => Editable::INPUT_DROPDOWN_LIST,
-                    'asPopover' => true,
-                    'data' =>Dist::getAllName('后台用户'),
-                ],
-            ],
-            'created_at',
-            [
-                'class' => 'yii\grid\ActionColumn',
-                'header' => '操作',
-                'template' => '{view} &nbsp;&nbsp;{delete}',
-                'buttons' => [
-                    'view' => function ($url, $model) {
-                        return Html::a('<i class="fa fa-eye"> 查看</i>', $url, [
-                            'title' => Yii::t('app', '查看'),
-                            'class' => 'del btn btn-primary btn-xs',
-                        ]);
-                    },
+<div id="content-header">
+    <div id="breadcrumb">
+        <a href="<?=Yii::$app->getHomeUrl()?>" title="Go to Home" class="tip-bottom"><i class="icon-home"></i> 主页</a>
+        <a href="#" class="current">账号管理</a>
+        <a href="<?=Url::toRoute('user/index')?>" class="current">用户列表</a>
+    </div>
+</div>
 
-                    'delete' => function ($url, $model) {
-                        if($model->status == 0){
-                            return Html::a('<i class="fa fa-unlock-alt"> 激活</i>', $url, [
-                                'title' => Yii::t('app', '激活'),
-                                'class' => 'del btn btn-info btn-xs',
-                                'data' => [
-                                    'confirm' => '你确定要激活该用户吗?',
-                                    'method' => 'post',
+<div class="container-fluid">
+    <div class="row-fluid">
+        <div class="span12">
+            <div class="widget-box">
+                <div class="widget-title">
+                    <span class="icon"><i class="icon-th"></i></span>
+                    <h5><?=Html::encode($this->title);?></h5>
+                </div>
+                <div class="widget-content">
+                    <a class="btn btn-danger del-all" onclick="delete_all()">批量删除</a>
+                    <?=\kartik\grid\GridView::widget([
+                            'dataProvider' => $dataProvider,
+                            'filterModel' => $searchModel,
+                            'containerOptions' => ['style' => 'overflow: auto'], // only set when $responsive = false
+                            'headerRowOptions' => ['class' => 'kartik-sheet-style'],
+                            'filterRowOptions' => ['class' => 'kartik-sheet-style'],
+                            'options'=>['id'=>'grid'],
+                            'export' => false , //不需要导出
+                            'pjax' => true,
+                            'pjaxSettings' => [
+                                'options' => [
+                                    'id' => 'userinfo'
                                 ],
-                            ]);
-                        }else{
-                            return Html::a('<i class="fa fa-lock"> 禁用</i>', $url, [
-                                'title' => Yii::t('app', '禁用'),
-                                'class' => 'del btn btn-danger btn-xs',
-                                'data' => [
-                                    'confirm' => '你确定要禁用该用户吗?',
-                                    'method' => 'post',
+                                'neverTimeout' => true,
+                            ],
+                            'columns' => [
+                                [
+                                    'class'=>\yii\grid\CheckboxColumn::className(),
+                                    'checkboxOptions' => function ($model, $key, $index, $column) {
+                                        return ['value'=>$model->u_id,'class'=>'checkbox'];
+                                    }
                                 ],
-                            ]);
-                        }
-                    }
+                                [
+                                    'attribute' =>'u_nickname',
+                                    'width' => '15%',
+                                    'format' => 'html',
+                                    'value' => function($data){
+                                        $headimg = empty($data->u_headImg) ? Url::to('@web/img/icons/32/user.png'):$data->u_headImg;
+                                        return '<img src="'.$headimg.'" class="user-img">'.$data->u_nickname;
+                                    }
+                                ],
+                                [
+                                    'attribute' => 'u_phone',
+                                    'headerOptions' => ['width' =>'150']
+                                ],
+                                [
+                                    'attribute'=>'u_sex',
+                                    'value'=>function($model){
+                                        return $model->u_sex ==1?'男':($model->u_sex==2 ? '女':'性别未知');
+                                    },
+                                    'filterType' => \kartik\grid\GridView::FILTER_SELECT2,
+                                    'filter' => ['1'=>'男','2'=>'女'],
+                                    'filterWidgetOptions' => [
+                                        'options' => ['placeholder' => ''],
+                                        'pluginOptions' => ['allowClear' => true],
+                                    ],
+                                ],
+                                [
+                                    'attribute' => 'u_state',
+                                    'format' => 'html',
+                                    'headerOptions' => ['width' =>'210'],
+                                    'class' => 'kartik\grid\EditableColumn',
+                                    'editableOptions'=>[
+                                        'inputType'=>\kartik\editable\Editable::INPUT_DROPDOWN_LIST,
+                                        'asPopover' => false,
+                                        'data' => ['1'=>'启用','2'=>'禁用'],
+                                    ],
+                                    'value' => function($model) {
+                                        return $model->u_state == 1 ? '<span class="badge badge-success">启用</span>' : '<span class="badge badge-info">禁用</span>';
+                                    },
+                                    'filterType' => \kartik\grid\GridView::FILTER_SELECT2,
+                                    'filter' => ['1'=>'启用','2'=>'禁用'],
+                                    'filterWidgetOptions' => [
+                                        'options' => ['placeholder' => ''],
+                                        'pluginOptions' => ['allowClear' => true],
+                                    ],
+                                ],
 
-                ],
+                                [
+                                    'attribute' => 'created_time',
+                                    'filter' => false, //不显示搜索框
+                                ],
 
-            ],
+                                [
+                                    'class' => 'yii\grid\ActionColumn',
+                                    'header' => '操作',
+                                    'template' => '{view}',
+                                    'buttons' => [
+                                        'view' => function ($url, $model) {
+                                            return Html::a('<i class="icon-eye-open"></i>', $url, [
+                                                'title' => Yii::t('app', '查看'),
+                                            ]);
+                                        }
+                                    ],
+                                ],
+                            ],
+                            'hover'=>true,
+                            'responsive'=>true,
+                            'condensed'=>true,
+                            'floatHeader'=>false,
+                        ]); ?>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-        ],
-        'responsive'=>true,
-        'hover'=>true,
-        'condensed'=>true,
-        'floatHeader'=>true,
-        'pjax'=>true,
-        //set your toolbar
-        'toolbar' => [
-                //按钮触发模态框  data-toggle 用于打开模态窗口；data-target：表示模态框的id
-            ['content' =>
-                Html::button('<i class="glyphicon glyphicon-plus"></i>', ['type'=>'button', 'title'=>'添加', 'class'=>'btn btn-success', 'onclick'=>'#', 'data-toggle' => 'modal','data-target' => '#create-modal']) . '   '.
-                Html::a('<i class="glyphicon glyphicon-repeat"></i>', ['index'], ['data-pjax'=>0, 'class'=>'btn btn-default', 'title'=>'刷新'])
-            ],
-            '{export}',
-            '{toggleData}',
-        ],
-        'panel' => [
-            'showFooter'=>true,
-        ],
-        'export' => ['fontAwesome'=>true],
-    ]); ?>
+<!--    --><?php
+//    //批量删除
+//    $this->registerJs('
+//        $(".content .gridview").on("click", function () {
+//            //注意这里的$("#grid")，要与gridview的options id保持一致
+//            var keys = $("#grid").yiiGridView("getSelectedRows");
+//
+//            if(keys.length==0){
+//               layer.msg("请选择需要删除的用户");
+//            }else{
+//               $.post("ajax-delete-all",{uids:keys},function(data){
+//                  layer.alert(data.message);
+//                  if(data.status=="200"){
+//                      window.location.reload();
+//                  }
+//               },"json");
+//            }
+//        });
+//    ');
+//    ?>
 
 
-    <?php
-    //批量删除
-    $this->registerJs('
-        $(".content .gridview").on("click", function () {
+<script>
+   function delete_all(){
             //注意这里的$("#grid")，要与gridview的options id保持一致
             var keys = $("#grid").yiiGridView("getSelectedRows");
 
             if(keys.length==0){
-               layer.msg("请选择需要删除的用户");
+                layer.msg("请选择需要删除的用户");
             }else{
-               $.post("ajax-delete-all",{uids:keys},function(data){
-                  layer.alert(data.message);
-                  if(data.status=="200"){
-                      window.location.reload();
-                  }
-               },"json");
+                $.post("ajax-delete-all",{uids:keys},function(data){
+                    layer.alert(data.message);
+                    if(data.status=="200"){
+                        window.location.reload();
+                    }
+                },"json");
             }
-        });
-    ');
-    //新增用户
-    //模态框（Modal）
-    Modal::begin([
-        'id' => 'create-modal', //与上面的data-target值保持一致
-        'header' => '<h4 class="modal-title">新建用户</h4>', //头部标题
-//        'footer' => '<a href="#" class="btn btn-primary" data-dismiss="modal">关闭</a>', //底部
-    ]);
-    $requestUrl = Url::toRoute('create');
-    $this->registerJs('
-       $.get("'.$requestUrl.'", {},
-            function (data) {
-            $(".modal-body").html(data);
-            });
-    ');
-    Modal::end();
-    ?>
+   }
 
-</div>
+
+
+</script>
