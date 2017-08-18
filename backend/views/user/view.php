@@ -1,5 +1,4 @@
 <?php
-
 use yii\helpers\Html;
 use yii\widgets\DetailView;
 use \backend\models\User;
@@ -58,7 +57,6 @@ $this->params['breadcrumbs'][] = $this->title;
                             'created_time',
                         ],
                     ]) ?>
-
                     <a href="<?=\yii\helpers\Url::toRoute('user/index')?>" class="btn btn-info"><i class=" icon-chevron-left"></i>返回</a>
                 </div>
             </div>
