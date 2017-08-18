@@ -50,7 +50,6 @@ $this->params['breadcrumbs'][] = $this->title;
                             ],
                             'u_nickname',
                             'u_phone',
-
                             [
                                 'attribute' => 'u_state',
                                 'format' => 'html',
