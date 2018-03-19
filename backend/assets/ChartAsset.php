@@ -17,7 +17,9 @@ class ChartAsset extends AssetBundle
 
     public $css = [];
     public $js = [
+
         'js/maruti.dashboard.js',
+        'js/ll/common.js',
     ];
 
     public $jsOptions = ['position' => \yii\web\View::POS_END];

@@ -9,6 +9,7 @@
 namespace backend\controllers;
 
 
+use backend\models\Admin;
 use backend\models\FFilms;
 use yii\filters\VerbFilter;
 use yii\web\Controller;
@@ -46,6 +47,10 @@ class UploadController extends Controller
                     $dir = '/photo/films/' . date('Ymd') . '/';
                     $type = 'pic';
                     break;
+                case 'logo':
+                    $Info = new Admin();
+                    $dir = '/photo/logo/' . date('Ymd') . '/';
+                    $type = 'a_logo';
 
             }
             $path = $basePath . $dir; //图片路径
