@@ -1,6 +1,9 @@
 <?php
 namespace backend\controllers;
 
+use backend\models\CCar;
+use backend\models\COrders;
+use backend\models\CUser;
 use Yii;
 use yii\web\Controller;
 use yii\filters\VerbFilter;
@@ -22,7 +25,7 @@ class SiteController extends Controller
                 'class' => AccessControl::className(),
                 'rules' => [
                     [
-                        'actions' => ['login', 'error'],
+                        'actions' => ['login', 'error','ajax-get-charts-data'],
                         'allow' => true,
                     ],
                     [
@@ -60,10 +63,58 @@ class SiteController extends Controller
      */
     public function actionIndex()
     {
-        //$user=Yii::$app->user->identity;
-        return $this->render('index');
-    }
+        //获取注册用户总数
+        $usercount = CUser::find()->where(['is_del'=>0])->count();
+        //获取订单总数
+        $ordercount = COrders::find()->where(['is_del'=>0])->count();
+        //获取置换车辆总数
+        $carcount = CCar::find()->count();
 
+        return $this->render('index',[
+            'usercount'=>$usercount,
+            'ordercount'=>$ordercount,
+            'carcount'=>$carcount
+        ]);
+    }
+    /**
+     * ajax获取首页图表数据
+     */
+    public function actionAjaxGetChartsData(){
+        Yii::$app->getResponse()->format = 'json';
+
+        //按年份统计每月新注册用户人数
+        $sql = '';
+        $sql .= 'SELECT COUNT(*) AS sheets ,MONTH(created_time) AS dates FROM c_user WHERE YEAR(created_time)=YEAR(NOW()) GROUP BY  dates';
+        $list = Yii::$app->db->createCommand($sql)->queryAll();
+
+        $xdata = [];
+        $ydata = [];
+        //数据初始化
+        for($i=1;$i<=12;$i++){
+            $xdata[$i-1] = $i; //月份
+            $ydata[$i-1] = 0; //新注册用户数量
+        }
+        if($list){
+            foreach($list as $item){
+                $key = $item['dates']-1;
+                $ydata[$key] = intval($item['sheets']);
+            }
+        }
+
+        $charts_data = [];
+
+        for($i=0;$i<12;$i++){
+            $charts_data[] = [
+                $xdata[$i],$ydata[$i]
+            ];
+        }
+
+        return  [
+            'status' => '200',
+            'message' => 'success',
+            'data' => $charts_data
+        ];
+    }
     /**
      * Login action.
      *

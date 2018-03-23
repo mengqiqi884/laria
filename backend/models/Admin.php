@@ -22,6 +22,10 @@ use yii\web\IdentityInterface;
 class Admin extends \yii\db\ActiveRecord implements IdentityInterface
 {
     public $userpassword;
+    public $pic;
+    public $province;
+    public $city;
+    public $area;
     /**
      * @inheritdoc
      */
@@ -43,8 +47,14 @@ class Admin extends \yii\db\ActiveRecord implements IdentityInterface
             [['a_logo','a_role'], 'string', 'max' => 200],
             [['a_pwd', 'a_token'], 'string', 'max' => 32],
             [['a_name','a_realname','a_position','a_email','a_type'], 'string', 'max' => 100],
-            //['a_pwd','match','pattern'=>'/^[\w\W]{5,16}$/','message'=>'密码长度为5~16位'],
-            ['a_email','match','pattern'=>'/^(\w)+(\.\w+)*@(\w)+((\.\w+)+)$/','message'=>'邮箱格式不正确'],
+
+            ['a_email','email','message'=>'邮箱格式不正确'],
+
+            ['a_name','unique'],//唯一
+            ['a_logo','file','extensions'=>['png','jpg','gif'],'maxSize'=>1024*1024*1024],
+
+            [['a_phone'], 'validItem'], //添加场景
+            [['a_phone'],'match','pattern'=>'/^[1][358][0-9]{9}$/','message' =>'手机号格式不正确']
         ];
     }
 
@@ -72,6 +82,22 @@ class Admin extends \yii\db\ActiveRecord implements IdentityInterface
             'updated_time' => 'Updated At',
             'is_del' => '是否删除',
         ];
+    }
+
+    //场景说明
+    public function validItem()
+    {
+        $query=self::find();
+        if(!empty($this->a_phone)){
+            $query->where(['a_phone'=>$this->a_phone]);
+        }
+        if(!empty($this->a_id)){
+            $query->andWhere(['<>','a_id',$this->a_id]);
+        }
+        $model=$query->one();
+        if(!empty($model)){
+            $this->addError('a_phone','*该手机号已存在');
+        }
     }
 
     public static function findIdentity($id)
@@ -108,6 +134,37 @@ class Admin extends \yii\db\ActiveRecord implements IdentityInterface
     }
 
     //查看用户的角色
+    public static function getAdminRoleName($roleid){
+        $sql = '';
+        $sql .= 'select name from auth_item where i_id='.$roleid;
+        $query = Yii::$app->db->createCommand($sql)->queryOne();
+        return $query ? $query['name'] : '角色未定义';
+    }
+
+    //获取角色列表
+    public static function getAllRoleName(){
+        $sql = '';
+        $sql .= 'select i_id,name from auth_item where type=1';
+        $query = Yii::$app->db->createCommand($sql)->queryAll();
+
+        $data = [];
+        foreach($query as $item){
+            $data[$item['i_id']] = $item['name'];
+        }
+
+        return $data;
+    }
+
+    //管理员当前状态
+    public static function getAdminState($stats)
+    {
+        $str = '无';
+        switch($stats){
+            case 1: $str = '<span class="badge badge-success">启用</span>';break;
+            case 2: $str = '<span class="badge badge-info">禁用</span>';break;
+        }
+        return $str;
+    }
 //    public static function getUserRoleName($role){
 //        $rolemodel=Dist::find()->where(['type'=>'后台用户'])->andWhere(['id'=>$role])->one();
 //        if(!empty($rolemodel)){
