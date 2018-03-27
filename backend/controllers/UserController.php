@@ -37,9 +37,6 @@ class UserController extends ApiController
      */
     public function actionIndex()
     {
-
-//        $dataProvider = CUser::find()->where(['is_del'=>0])->all();
-
         $searchModel = new UserSearch();
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
         $dataProvider->pagination = [
